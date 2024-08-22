@@ -1,6 +1,7 @@
 package redismock
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -739,6 +740,50 @@ func (cmd *ExpectedIntSlice) SetVal(val []int64) {
 
 func (cmd *ExpectedIntSlice) inflow(c redis.Cmder) {
 	inflow(c, "val", cmd.val)
+}
+
+// ------------------------------------------------------------
+// Assuming a simple mock struct to simulate clusterNode and its Client
+type mockClusterNode struct {
+	Name   string // Simplified field, just for example
+	Client *mockClient
+}
+
+type mockClient struct {
+	// Add any fields or methods you expect to interact with
+}
+
+type ExpectedForEachMaster struct {
+	expectedBase
+
+	masters []*mockClusterNode // Mocked master nodes
+	fn      func(ctx context.Context, client *mockClient) error
+}
+
+// SetMasters allows setting the master nodes that will be iterated over.
+func (cmd *ExpectedForEachMaster) SetMasters(masters []*mockClusterNode) *ExpectedForEachMaster {
+	cmd.setVal = true
+	cmd.masters = make([]*mockClusterNode, len(masters))
+	copy(cmd.masters, masters)
+	return cmd
+}
+
+// SetFn allows setting the function that will be applied to each master node.
+func (cmd *ExpectedForEachMaster) SetFn(fn func(ctx context.Context, client *mockClient) error) *ExpectedForEachMaster {
+	cmd.fn = fn
+	return cmd
+}
+
+// inflow simulates the behavior of ForEachMaster.
+func (cmd *ExpectedForEachMaster) inflow(c redis.Cmder) {
+	for _, master := range cmd.masters {
+		if cmd.fn != nil {
+			err := cmd.fn(context.Background(), master.Client) // Use a background context for simulation
+			if err != nil {
+				// Handle the error (logging, channel send, etc.)
+			}
+		}
+	}
 }
 
 // ------------------------------------------------------------

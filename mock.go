@@ -23,10 +23,11 @@ type mock struct {
 
 	parent *mock
 
-	factory    mockCmdable
-	client     redis.Cmdable
-	expected   []expectation
-	unexpected []redis.Cmder
+	factory       mockCmdable
+	client        redis.Cmdable
+	clusterClient redis.ClusterClient
+	expected      []expectation
+	unexpected    []redis.Cmder
 
 	strictOrder bool
 
@@ -982,6 +983,14 @@ func (m *mock) ExpectBitPosSpan(key string, bit int8, start, end int64, span str
 func (m *mock) ExpectBitField(key string, args ...interface{}) *ExpectedIntSlice {
 	e := &ExpectedIntSlice{}
 	e.cmd = m.factory.BitField(m.ctx, key, args...)
+	m.pushExpect(e)
+	return e
+}
+
+// ExpectForEachMaster sets up the expectation for the ForEachMaster function.
+func (m *mock) ExpectForEachMaster(fn func(ctx context.Context, client *mockClient) error) *ExpectedForEachMaster {
+	e := &ExpectedForEachMaster{}
+	e.fn = fn
 	m.pushExpect(e)
 	return e
 }
